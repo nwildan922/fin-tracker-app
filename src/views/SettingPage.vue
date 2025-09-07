@@ -20,6 +20,9 @@
             <ion-label>🌙 Dark Mode</ion-label>
             <ion-toggle v-model="model.darkMode" slot="end" />
           </ion-item>
+          <ion-item button @click="test">
+            <ion-label>Test Page</ion-label>
+          </ion-item>
 
           <ion-item button color="danger">
             <ion-label>🗑 Clear All Data</ion-label>
@@ -62,6 +65,8 @@ import { Filesystem } from "@capacitor/filesystem";
 import { showMessage } from "@/utils/common";
 import { exportData, importData } from "@/utils/backup-helper";
 import { Backup } from "@/models/backup";
+import { useRouter } from "vue-router";
+
 export default {
   name: "SettingPage",
   components: {
@@ -78,6 +83,7 @@ export default {
     IonToggle,
   },
   setup() {
+    const router = useRouter();
     // function or event here
     const getBooleanFromLocalStorage = (key: string, defaultValue: boolean) => {
       const value = localStorage.getItem(key);
@@ -181,11 +187,15 @@ export default {
         showMessage("Failed import data : " + error);
       }
     };
+    const test = async () => {
+      router.push("/auth");
+    };
     return {
       model,
       handleTap,
       handleBackup,
       handleImport,
+      test,
     };
   },
 };

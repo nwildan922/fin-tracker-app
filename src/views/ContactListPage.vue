@@ -14,12 +14,22 @@
 
     <!-- Content -->
     <ion-content class="ion-padding">
-      <!-- Search -->
-      <ion-searchbar
-        v-model="searchQuery"
-        placeholder="Search site or username"
-      ></ion-searchbar>
-
+      <ion-item lines="none">
+        <!-- Search -->
+        <ion-searchbar
+          v-model="searchQuery"
+          placeholder="Search site or username"
+        ></ion-searchbar>
+        <!-- Three-dots: opens Action Sheet -->
+        <ion-button id="more-actions">
+          <ion-icon :icon="ellipsisVertical" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-item>
+      <ion-action-sheet
+        trigger="more-actions"
+        header="More options"
+        :buttons="actionButtons"
+      ></ion-action-sheet>
       <ion-list v-if="filteredData.length > 0">
         <ion-item-sliding
           v-for="item in filteredData"
@@ -76,18 +86,31 @@ import {
   IonAvatar,
   IonItem,
   IonSearchbar,
+  IonActionSheet,
 } from "@ionic/vue";
-import { add as addIcon } from "ionicons/icons";
+import { add as addIcon, ellipsisVertical } from "ionicons/icons";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { ContactRepository } from "@/repositories/contact-repository";
 import type { Contact } from "@/models/contact";
 import { showMessage } from "@/utils/common";
-
 const page = "contact";
 const router = useRouter();
 const repo = new ContactRepository();
-
+const actionButtons = [
+  {
+    text: "Import",
+    handler: onImport,
+  },
+  {
+    text: "Merge",
+    handler: onMerge,
+  },
+  {
+    text: "Cancel",
+    role: "cancel", // renders as cancel and auto-closes
+  },
+];
 const searchQuery = ref("");
 const gridData = ref<Contact[]>([]);
 const loading = ref(true);
@@ -99,6 +122,12 @@ const filteredData = computed(() => {
     c.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });
+function onImport() {
+  /* TODO: open picker */
+}
+function onMerge() {
+  /* TODO: merge flow */
+}
 
 onMounted(async () => {
   loading.value = true;

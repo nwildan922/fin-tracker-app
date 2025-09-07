@@ -66,6 +66,10 @@ import {
   IonButton,
   IonButtons,
   IonIcon,
+  onIonViewWillEnter,
+  IonItemSliding,
+  IonItemOptions,
+  IonItemOption,
 } from "@ionic/vue";
 import { add as addIcon } from "ionicons/icons";
 import { ref, computed, onMounted, onUnmounted } from "vue";
@@ -109,7 +113,7 @@ const formatDate = (date: string) => {
 
 // ✅ Load data
 let subscription: any;
-onMounted(async () => {
+onIonViewWillEnter(async () => {
   // Load categories once
   categories.value = await categoryRepo.getAll();
 

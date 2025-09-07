@@ -8,6 +8,10 @@ const routes: Array<RouteRecordRaw> = [
     redirect: "/tabs/dashboard",
   },
   {
+    path: "/auth",
+    component: () => import("@/views/AuthenticationPage.vue"),
+  },
+  {
     path: "/tabs/",
     component: TabsPage,
     children: [

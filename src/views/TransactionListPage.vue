@@ -74,6 +74,7 @@ import {
   IonItemSliding,
   IonItemOptions,
   IonItemOption,
+  onIonViewWillEnter,
 } from "@ionic/vue";
 import { add as addIcon } from "ionicons/icons";
 
@@ -115,7 +116,7 @@ const formatCurrency = (value: number) => {
 
 // fetch transactions & assets
 let subscription: any;
-onMounted(async () => {
+onIonViewWillEnter(async () => {
   assets.value = await assetRepo.getAll();
 
   subscription = await txRepo.observeAll((items) => {
