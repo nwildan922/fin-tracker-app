@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory } from "@ionic/vue-router";
 import { RouteRecordRaw } from "vue-router";
 import TabsPage from "../views/TabsPage.vue";
+import { getData } from "@/utils/preference-helper";
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: "/",
-    redirect: "/tabs/dashboard",
+    redirect: "/auth",
   },
   {
     path: "/auth",
@@ -14,6 +15,7 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: "/tabs/",
     component: TabsPage,
+    meta: { requiresAuth: true },
     children: [
       {
         path: "",
@@ -88,4 +90,16 @@ const router = createRouter({
   routes,
 });
 
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth) {
+    const session = await getData("isAuthenticated");
+    if (session === "true") {
+      next();
+    } else {
+      next("/auth");
+    }
+  } else {
+    next();
+  }
+});
 export default router;

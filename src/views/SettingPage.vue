@@ -20,12 +20,8 @@
             <ion-label>🌙 Dark Mode</ion-label>
             <ion-toggle v-model="model.darkMode" slot="end" />
           </ion-item>
-          <ion-item button @click="test">
-            <ion-label>Test Page</ion-label>
-          </ion-item>
-
-          <ion-item button color="danger">
-            <ion-label>🗑 Clear All Data</ion-label>
+          <ion-item button color="danger" @click="logout">
+            <ion-label>Logout</ion-label>
           </ion-item>
 
           <ion-item-group v-if="model.developerMode">
@@ -66,6 +62,7 @@ import { showMessage } from "@/utils/common";
 import { exportData, importData } from "@/utils/backup-helper";
 import { Backup } from "@/models/backup";
 import { useRouter } from "vue-router";
+import { removeData } from "@/utils/preference-helper";
 
 export default {
   name: "SettingPage",
@@ -187,15 +184,16 @@ export default {
         showMessage("Failed import data : " + error);
       }
     };
-    const test = async () => {
-      router.push("/auth");
+    const logout = async () => {
+      await removeData("isAuthenticated");
+      await router.push("/");
     };
     return {
       model,
       handleTap,
       handleBackup,
       handleImport,
-      test,
+      logout,
     };
   },
 };
