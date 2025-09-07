@@ -115,7 +115,6 @@ onMounted(async () => {
 });
 
 const submit = async () => {
-  debugger;
   if (!form.value.name.trim() || !form.value.phone1.trim()) {
     showMessage("Name, Phone 1, and Phone 2 are required");
     return;

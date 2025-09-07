@@ -173,9 +173,13 @@ export default {
           return;
         }
       }
-      const data: Backup = await importFile();
-      await importData(data);
-      showMessage("Import data success.");
+      try {
+        const data: Backup = await importFile();
+        await importData(data);
+        showMessage("Import data success.");
+      } catch (error) {
+        showMessage("Failed import data : " + error);
+      }
     };
     return {
       model,
