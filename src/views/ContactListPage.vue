@@ -5,6 +5,13 @@
       <ion-toolbar>
         <ion-title>Contacts</ion-title>
         <ion-buttons slot="end">
+          <ion-button
+            v-if="selectMode && selectedCount"
+            color="danger"
+            @click="removeSelected"
+          >
+            <ion-icon :icon="trashIcon" slot="icon-only"></ion-icon>
+          </ion-button>
           <ion-button @click="add">
             <ion-icon :icon="addIcon" slot="icon-only"></ion-icon>
           </ion-button>
@@ -34,14 +41,29 @@
         <ion-item-sliding
           v-for="item in filteredData"
           :key="item.id"
-          ref="slidingRefs"
+          :disabled="selectMode"
         >
-          <ion-item button @click="viewDetail(item.id)">
-            <ion-avatar slot="start">
+          <ion-item
+            button
+            @click="
+              selectMode
+                ? toggleOne(item.id, !isSelected(item.id))
+                : viewDetail(item.id)
+            "
+          >
+            <ion-checkbox
+              v-if="selectMode"
+              slot="start"
+              :checked="isSelected(item.id)"
+              @ionChange="toggleOne(item.id, $event.detail.checked)"
+              @click.stop
+            />
+            <ion-avatar v-else slot="start">
               <div class="avatar-circle">
                 {{ (item.name || "U")[0].toUpperCase() }}
               </div>
             </ion-avatar>
+
             <ion-label>
               <h2>{{ item.name || "Unnamed Contact" }}</h2>
               <p>
@@ -53,10 +75,10 @@
             </ion-label>
           </ion-item>
 
-          <ion-item-options side="end">
-            <ion-item-option color="danger" @click="remove(item.id)">
-              Delete
-            </ion-item-option>
+          <ion-item-options side="end" v-if="!selectMode">
+            <ion-item-option color="danger" @click="remove(item.id)"
+              >Delete</ion-item-option
+            >
           </ion-item-options>
         </ion-item-sliding>
       </ion-list>
@@ -87,13 +109,26 @@ import {
   IonItem,
   IonSearchbar,
   IonActionSheet,
+  IonCheckbox,
+  isPlatform,
 } from "@ionic/vue";
-import { add as addIcon, ellipsisVertical } from "ionicons/icons";
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import {
+  add as addIcon,
+  ellipsisVertical,
+  trash as trashIcon,
+} from "ionicons/icons";
+import { ref, computed, onMounted, onUnmounted, watch, Ref } from "vue";
 import { useRouter } from "vue-router";
 import { ContactRepository } from "@/repositories/contact-repository";
 import type { Contact } from "@/models/contact";
 import { showMessage } from "@/utils/common";
+import { exportContactsToVcf } from "@/utils/contact-vcf-helper";
+import {
+  exportContactsVcf,
+  importContactsFromPickedVcf,
+} from "@/utils/contact-vcf-file-helper";
+import { Filesystem } from "@capacitor/filesystem";
+import { importFile } from "@/utils/vcf-impor-helper";
 const page = "contact";
 const router = useRouter();
 const repo = new ContactRepository();
@@ -103,14 +138,37 @@ const actionButtons = [
     handler: onImport,
   },
   {
-    text: "Merge",
-    handler: onMerge,
+    text: "Export to VCF",
+    handler: onExport,
+  },
+  {
+    text: "Select",
+    handler: () => enterSelectMode(),
+  },
+  {
+    text: "Select All",
+    handler: () => {
+      enterSelectMode();
+      selectAllFromFiltered();
+    },
   },
   {
     text: "Cancel",
     role: "cancel", // renders as cancel and auto-closes
   },
 ];
+const selectMode: Ref<boolean> = ref(false);
+const selectedIds: Ref<string[]> = ref([]);
+
+const selectedCount = computed(() => selectedIds.value.length);
+const isSelected = (id: string) => selectedIds.value.includes(id);
+
+const enterSelectMode = () => {
+  selectMode.value = true;
+};
+const exitSelectMode = () => {
+  selectMode.value = false;
+};
 const searchQuery = ref("");
 const gridData = ref<Contact[]>([]);
 const loading = ref(true);
@@ -122,11 +180,19 @@ const filteredData = computed(() => {
     c.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });
-function onImport() {
-  /* TODO: open picker */
+async function onImport() {
+  const data: Contact[] = await importContactsFromPickedVcf();
+  for (let i = 0; i < data.length; i++) {
+    await repo.create(data[i]);
+    console.log(`success add`, JSON.stringify(data[i]));
+  }
 }
-function onMerge() {
-  /* TODO: merge flow */
+async function onExport() {
+  console.log("data will be exported are :");
+  const data: Contact[] = await repo.getByIds(selectedIds.value);
+  console.log(JSON.stringify(data));
+  const result = await exportContactsVcf(data);
+  console.log(`result vcf : `, result);
 }
 
 onMounted(async () => {
@@ -151,7 +217,7 @@ const add = () => {
   router.push(`/tabs/${page}`);
 };
 
-const remove = async (id: string) => {
+const remove = async (id: any) => {
   const confirmed = confirm(`Are you sure you want to delete this ${page}?`);
   if (!confirmed) return;
 
@@ -161,6 +227,39 @@ const remove = async (id: string) => {
     console.error(`Failed to delete ${page}:`, err);
     showMessage("Something went wrong while deleting.");
   }
+};
+const toggleOne = (id: string, checked: boolean) => {
+  if (checked) {
+    if (!isSelected(id)) selectedIds.value = [...selectedIds.value, id];
+  } else {
+    selectedIds.value = selectedIds.value.filter((x) => x !== id);
+  }
+};
+
+// Select all visible items
+const selectAllFromFiltered = () => {
+  // filteredData must be a ref/computed available in this SFC
+  selectMode.value = true;
+  selectedIds.value = (filteredData?.value ?? []).map((x) => x.id);
+};
+
+const clearSelection = () => {
+  selectedIds.value = [];
+  exitSelectMode();
+};
+
+watch(selectedIds, (v) => {
+  if (selectMode.value && v.length === 0) exitSelectMode();
+});
+
+// Bulk delete using your existing remove(id)
+const removeSelected = async () => {
+  if (!selectedIds.value.length) return;
+  const ids = [...selectedIds.value];
+  for (const id of ids) {
+    await remove(id); // reuse your remove
+  }
+  clearSelection();
 };
 </script>
 
